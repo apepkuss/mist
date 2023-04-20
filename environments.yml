@@ -3,7 +3,7 @@ channels:
   - pytorch
   - defaults
 dependencies:
-  - python=3.8.5
+  - python=3.10
   - pip=20.3
   - pytorch=1.11.0
   - torchvision=0.12.0
@@ -11,7 +11,7 @@ dependencies:
   - pip:
     - albumentations==0.4.3
     - diffusers
-    - opencv-python==4.1.2.30
+    - opencv-python
     - pudb==2019.2
     - invisible-watermark
     - imageio==2.9.0
@@ -26,8 +26,8 @@ dependencies:
     - torchmetrics==0.6.0
     - kornia==0.6
     - gradio
-    - -e git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers
-    - -e git+https://github.com/openai/CLIP.git@main#egg=clip
-    - advertorch@git+https://github.com/BorealisAI/advertorch.git
+    - -e git+https://ghproxy.com/https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers
+    - -e git+https://ghproxy.com/https://github.com/openai/CLIP.git@main#egg=clip
+    - advertorch@git+https://ghproxy.com/https://github.com/BorealisAI/advertorch.git
     - -e .
 
