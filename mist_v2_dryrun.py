@@ -16,18 +16,6 @@ from pytorch_lightning import seed_everything
 from ldm.util import instantiate_from_config
 from advertorch.attacks import LinfPGDAttack
 
-from typing import List
-
-# mosec
-from mosec import Server, ValidationError, Worker, get_logger
-
-from io import BytesIO
-
-from mosec import Server, ValidationError, Worker, get_logger
-from mosec.mixin import MsgpackMixin
-
-logger = get_logger()
-
 
 ssl._create_default_https_context = ssl._create_unverified_context
 os.environ["TORCH_HOME"] = os.getcwd()
@@ -285,84 +273,45 @@ def infer(img: PIL.Image.Image, config, tar_img: PIL.Image.Image = None) -> np.n
     return grid_adv
 
 
-class Preprocess(MsgpackMixin, Worker):
-    def forward(self, data: dict) -> dict:
-        # output image size: 512. Note that the output image is square.
-        data = data["image"]["data"]
-        shape = data["image"]["shape"]
-
-        # decode the input image
-        img_array = np.frombuffer(data, dtype=np.uint8).reshape(shape)
-        img = Image.fromarray(img_array)
-
-        # set input_size
-        input_size = shape[0] if shape[0] <= shape[1] else shape[1]
-        data["input_size"] = input_size
-
-        # preprocess the input image
-        img = img.resize((input_size, input_size), resample=PIL.Image.BICUBIC)
-        data["resized_image"] = img
-
-        # preprocess the target image
-        target_image = Image.open("MIST.png").resize(
-            (input_size, input_size), resample=PIL.Image.BICUBIC
-        )
-        data["resized_target_image"] = target_image
-
-        return data
-
-
-class Inference(Worker):
-    def forward(self, data: dict) -> np.ndarray:
-        epsilon = data["epsilon"]
-        steps = data["steps"]
-        mode = data["mode"]
-        rate = data["rate"]
-        input_size = data["input_size"]
-        block_num = data["block_num"]
-
-        bls = input_size // block_num
-
-        config = init(
-            epsilon=epsilon, steps=steps, mode=mode, rate=rate, input_size=input_size
-        )
-        config["parameters"]["input_size"] = bls
-
-        img = data["resized_image"]
-        tar_img = data["resized_target_image"]
-
-        output_image = np.zeros([input_size, input_size, 3])
-        for i in tqdm(range(block_num)):
-            for j in tqdm(range(block_num)):
-                img_block = Image.fromarray(
-                    np.array(img)[bls * i : bls * i + bls, bls * j : bls * j + bls]
-                )
-                tar_block = Image.fromarray(
-                    np.array(tar_img)[bls * i : bls * i + bls, bls * j : bls * j + bls]
-                )
-                output_image[bls * i : bls * i + bls, bls * j : bls * j + bls] = infer(
-                    img_block, config, tar_block
-                )
-
-        return output_image
-
-
-class Postprocess(MsgpackMixin, Worker):
-    def forward(self, data: np.ndarray) -> dict:
-        output_size = data.shape
-        output_dtype_name = data.dtype.name
-        output_data = data.tobytes()
-
-        return {
-            "outout_image_data": output_data,
-            "output_image_size": output_size,
-            "output_image_data_dtype_name": output_dtype_name,
-        }
-
+# Test the script with command: python mist_v2.py 16 100 512 1 2 1
+# or the command: python mist_v2.py 16 100 512 2 2 1, which process
+# the image blockwisely for lower VRAM cost
 
 if __name__ == "__main__":
-    server = Server()
-    server.append_worker(Preprocess)
-    server.append_worker(Inference, max_batch_size=1)
-    server.append_worker(Postprocess)
-    server.run()
+    epsilon = int(sys.argv[1])
+    steps = int(sys.argv[2])
+    input_size = int(sys.argv[3])
+    block_num = int(sys.argv[4])
+    mode = int(sys.argv[5])
+    rate = 10 ** (int(sys.argv[6]) + 3)
+
+    bls = input_size // block_num
+
+    image_path = "./test/sample.png"
+    target_image_path = "MIST.png"
+    img = load_image_from_path(image_path, input_size)
+    tar_img = load_image_from_path(target_image_path, input_size)
+
+    config = init(epsilon=epsilon, steps=steps, mode=mode, rate=rate)
+    config["parameters"]["input_size"] = bls
+
+    # output_image = np.zeros([input_size, input_size, 3])
+    # for i in tqdm(range(block_num)):
+    #     for j in tqdm(range(block_num)):
+    #         img_block = Image.fromarray(
+    #             np.array(img)[bls * i : bls * i + bls, bls * j : bls * j + bls]
+    #         )
+    #         tar_block = Image.fromarray(
+    #             np.array(tar_img)[bls * i : bls * i + bls, bls * j : bls * j + bls]
+    #         )
+    #         output_image[bls * i : bls * i + bls, bls * j : bls * j + bls] = infer(
+    #             img_block, config, tar_block
+    #         )
+    # output = Image.fromarray(output_image.astype(np.uint8))
+    # output_name = "./test/misted_sample_"
+    # for i in range(5):
+    #     output_name += sys.argv[i + 1] + "_"
+    # if mode >= 2:
+    #     output_name += sys.argv[6]
+    # output_path = output_name + ".png"
+    # output.save(output_path)

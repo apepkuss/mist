@@ -14,8 +14,15 @@ RUN apt update && \
     apt install -y --no-install-recommends \
     wget \
     git \
+    python3 \
+    python3-pip \
     ca-certificates && \
     rm -rf /var/lib/apt/lists/*
+
+# upgrade pip
+RUN python3 -m pip install -i https://pypi.tuna.tsinghua.edu.cn/simple --upgrade pip
+# update the pip source
+RUN pip3 config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
 
 # RUN set -x && \
 #     UNAME_M="$(uname -m)" && \
@@ -45,20 +52,20 @@ RUN apt update && \
 #     find /opt/conda/ -follow -type f -name '*.js.map' -delete && \
 #     /opt/conda/bin/conda clean -afy
 
-COPY Miniconda3-py310_23.1.0-1-Linux-x86_64.sh /
+# COPY Miniconda3-py310_23.1.0-1-Linux-x86_64.sh /
 
-RUN bash Miniconda3-py310_23.1.0-1-Linux-x86_64.sh -b -p /opt/conda
+# RUN bash Miniconda3-py310_23.1.0-1-Linux-x86_64.sh -b -p /opt/conda
 
-COPY .condarc /home/
+# COPY .condarc /home/
 
-RUN conda create -n mist python=3.10
+# RUN conda create -n mist python=3.10
 
-ENV MIST_PREFIX=/opt/conda/envs/mist/bin
+# ENV MIST_PREFIX=/opt/conda/envs/mist/bin
 
-RUN update-alternatives --install /usr/bin/python python ${MIST_PREFIX}/python 1 && \
-    update-alternatives --install /usr/bin/python3 python3 ${MIST_PREFIX}/python3 1 && \
-    update-alternatives --install /usr/bin/pip pip ${MIST_PREFIX}/pip 1 && \
-    update-alternatives --install /usr/bin/pip3 pip3 ${MIST_PREFIX}/pip3 1
+# RUN update-alternatives --install /usr/bin/python python ${MIST_PREFIX}/python 1 && \
+#     update-alternatives --install /usr/bin/python3 python3 ${MIST_PREFIX}/python3 1 && \
+#     update-alternatives --install /usr/bin/pip pip ${MIST_PREFIX}/pip 1 && \
+#     update-alternatives --install /usr/bin/pip3 pip3 ${MIST_PREFIX}/pip3 1
 
 RUN pip3 install torch==1.13.1+cu116 torchvision==0.14.1+cu116 torchaudio==0.13.1 --extra-index-url https://download.pytorch.org/whl/cu116
 RUN pip3 install numpy albumentations==0.4.3 diffusers opencv-python pudb==2019.2 
@@ -97,7 +104,7 @@ RUN git clone -b deploy-on-flows --single-branch https://ghproxy.com/https://git
 
 WORKDIR /workspace/mist
 
-RUN which python3
+RUN python3 mist_v2_dryrun.py 16 100 512 1 2 1
 
 ENTRYPOINT [ "python3", "mist_v2_main.py" ]
 CMD [ "--timeout", "20000" ]
