@@ -330,12 +330,17 @@ def infer(img: PIL.Image.Image, config, tar_img: PIL.Image.Image = None) -> np.n
 
 class Preprocess(Worker):
     def forward(self, data: dict) -> dict:
+        # raw image size: (H, W, C), for example: (512, 512, 4). Note that the image is RGBA.
         input_size = data["input_size"]
+        # output image size: 512. Note that the output image is square.
         output_size = data["output_size"]
+        # the image bytes is generated from np.array.tobytes()
         image_bytes = data["image"]
-        stream = BytesIO(image_bytes)
-        original_image = Image.frombytes("RGBA", input_size, stream.getvalue())
-        resized_image = original_image.resize(
+
+        # recover the image from bytes
+        image_np = np.frombuffer(image_bytes, dtype=np.uint8).reshape(input_size)
+        image_raw = Image.fromarray(image_np)
+        resized_image = image_raw.resize(
             (output_size, output_size), resample=PIL.BICUBIC
         )
         data["image"] = resized_image
@@ -356,6 +361,8 @@ class Inference(Worker):
         rate = data["rate"]
         output_size = data["output_size"]
         block_num = data["block_num"]
+
+        bls = output_size // block_num
 
         config = init(epsilon=epsilon, steps=steps, mode=mode, rate=rate)
         config["parameters"]["input_size"] = bls
