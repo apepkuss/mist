@@ -26,6 +26,9 @@ from io import BytesIO
 from mosec import Server, ValidationError, Worker, get_logger
 from mosec.mixin import MsgpackMixin
 
+import httpx
+import io
+
 logger = get_logger()
 
 
@@ -287,16 +290,13 @@ def infer(img: PIL.Image.Image, config, tar_img: PIL.Image.Image = None) -> np.n
 
 class Preprocess(MsgpackMixin, Worker):
     def forward(self, data: dict) -> dict:
-        # output image size: 512. Note that the output image is square.
-        data = data["image"]["data"]
-        shape = data["image"]["shape"]
-
-        # decode the input image
-        img_array = np.frombuffer(data, dtype=np.uint8).reshape(shape)
-        img = Image.fromarray(img_array)
+        # load image
+        url = data["image_url"]
+        img_bytes = httpx.get(url, timeout=60 * 3).content
+        img = Image.open(io.BytesIO(img_bytes))
 
         # set input_size
-        input_size = shape[0] if shape[0] <= shape[1] else shape[1]
+        input_size = img.size[0] if img.size[0] <= img.size[1] else img.size[1]
         data["input_size"] = input_size
 
         # preprocess the input image

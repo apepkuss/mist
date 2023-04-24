@@ -10,23 +10,24 @@ import numpy as np
 APIKey = "mzi-510edb7dff018ec70bc8e82671552dcc"
 DeploymentKey = "mist-hia1y6nihmn9fa3v"
 
-# load image
-img = Image.open("./test/sample.png")
-print(f"img size: {img.size}")
+# # load image
+# img = Image.open("./test/sample.png")
+# print(f"img size: {img.size}")
 
-# convert to numpy array (for getting `shape`) then to bytes
-array = np.array(img)
-img_shape = array.shape
-print(f"array shape: {img_shape}")
-img_bytes = array.tobytes()
-print(f"size of bytes: {len(img_bytes)}")
+# # convert to numpy array (for getting `shape`) then to bytes
+# array = np.array(img)
+# img_shape = array.shape
+# print(f"array shape: {img_shape}")
+# img_bytes = array.tobytes()
+# print(f"size of bytes: {len(img_bytes)}")
 
 # create a modelz client
 cli = modelz.ModelzClient(key=APIKey, deployment=DeploymentKey, timeout=300)
 
 params = msgpack.packb(
     {
-        # "output_size": 512,
+        "image_url": "https://raw.githubusercontent.com/apepkuss/mist/main/test/sample.png",
+        "output_size": 512,
         "epsilon": 16,
         "steps": 100,
         "block_num": 1,
@@ -34,10 +35,6 @@ params = msgpack.packb(
         "rate": 1,
     }
 )
-params["image"] = {
-    "data": img_bytes,
-    "shape": img_shape,
-}
 
 response = cli.inference(params=params, serde="msgpack")
 
@@ -56,7 +53,7 @@ else:
 #     data=msgpack.packb(
 #         {
 #             "image": img_bytes,
-#             "output_size": 512,
+#             "input_size": 512,
 #             "epsilon": 16,
 #             "steps": 100,
 #             "block_num": 1,
