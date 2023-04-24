@@ -79,6 +79,7 @@ RUN pip3 install -e git+https://ghproxy.com/https://github.com/openai/CLIP.git@m
 
 RUN pip3 install advertorch@git+https://ghproxy.com/https://github.com/BorealisAI/advertorch.git
 
+RUN pip3 install --force-reinstall pillow
 
 # COPY requirements.txt /
 
@@ -103,6 +104,10 @@ WORKDIR /workspace
 RUN git clone -b deploy-on-flows --single-branch https://ghproxy.com/https://github.com/apepkuss/mist.git
 
 WORKDIR /workspace/mist
+
+RUN mkdir -p  models/ldm/stable-diffusion-v1
+
+COPY sd-v1-4.ckpt models/ldm/stable-diffusion-v1/model.ckpt
 
 RUN python3 mist_v2_dryrun.py 16 100 512 1 2 1
 
