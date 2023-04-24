@@ -23,6 +23,9 @@ from mosec import Server, ValidationError, Worker, get_logger
 
 from io import BytesIO
 
+from mosec import Server, ValidationError, Worker, get_logger
+from mosec.mixin import MsgpackMixin
+
 logger = get_logger()
 
 
@@ -328,27 +331,27 @@ def infer(img: PIL.Image.Image, config, tar_img: PIL.Image.Image = None) -> np.n
 #     output.save(output_path)
 
 
-class Preprocess(Worker):
+class Preprocess(MsgpackMixin, Worker):
     def forward(self, data: dict) -> dict:
-        # raw image size: (H, W, C), for example: (512, 512, 4). Note that the image is RGBA.
-        input_size = data["input_size"]
         # output image size: 512. Note that the output image is square.
         output_size = data["output_size"]
-        # the image bytes is generated from np.array.tobytes()
-        image_bytes = data["image"]
 
-        # recover the image from bytes
-        image_np = np.frombuffer(image_bytes, dtype=np.uint8).reshape(input_size)
-        image_raw = Image.fromarray(image_np)
-        resized_image = image_raw.resize(
-            (output_size, output_size), resample=PIL.BICUBIC
-        )
-        data["image"] = resized_image
+        # decode the input image
+        try:
+            img = Image.open(BytesIO(data["image"]))
+        except KeyError as err:
+            raise ValidationError(f"cannot find key {err}") from err
+        except Exception as err:
+            raise ValidationError(f"cannot decode as image data: {err}") from err
+        # preprocess the input image
+        img = img.resize((output_size, output_size), resample=PIL.Image.BICUBIC)
+        data["resized_image"] = img
 
+        # preprocess the target image
         target_image = Image.open("MIST.png").resize(
             (output_size, output_size), resample=PIL.Image.BICUBIC
         )
-        data["target_image"] = target_image
+        data["resized_target_image"] = target_image
 
         return data
 
@@ -367,8 +370,8 @@ class Inference(Worker):
         config = init(epsilon=epsilon, steps=steps, mode=mode, rate=rate)
         config["parameters"]["input_size"] = bls
 
-        img = data["image"]
-        tar_img = data["target_image"]
+        img = data["resized_image"]
+        tar_img = data["resized_target_image"]
 
         output_image = np.zeros([output_size, output_size, 3])
         for i in tqdm(range(block_num)):
@@ -386,7 +389,7 @@ class Inference(Worker):
         return output_image
 
 
-class Postprocess(Worker):
+class Postprocess(MsgpackMixin, Worker):
     def forward(self, data: np.ndarray) -> dict:
         output_size = data.shape
         output_dtype_name = data.dtype.name
