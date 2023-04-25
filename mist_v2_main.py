@@ -5,7 +5,6 @@ import PIL
 from PIL import Image
 from einops import rearrange
 import ssl
-import sys
 from tqdm import tqdm
 
 import torch
@@ -16,17 +15,11 @@ from pytorch_lightning import seed_everything
 from ldm.util import instantiate_from_config
 from advertorch.attacks import LinfPGDAttack
 
-from typing import List
-
 # mosec
-from mosec import Server, ValidationError, Worker, get_logger
-
-from io import BytesIO
-
-from mosec import Server, ValidationError, Worker, get_logger
+from mosec import Server, Worker, get_logger
 from mosec.mixin import MsgpackMixin
 
-import httpx
+import wget
 import io
 
 logger = get_logger()
@@ -290,9 +283,20 @@ def infer(img: PIL.Image.Image, config, tar_img: PIL.Image.Image = None) -> np.n
 
 class Preprocess(MsgpackMixin, Worker):
     def forward(self, data: dict) -> dict:
-        # load image
         url = data["image_url"]
-        img_bytes = httpx.get(url, timeout=60 * 3).content
+        # download image
+        filename = wget.download(url, filename)
+        with open(filename, "rb") as f:
+            img_bytes = f.read()
+
+        # remove the image file
+        if os.path.exists(filename):
+            os.remove(filename)
+        else:
+            print(f"{filename} does not exist")
+
+        # url = data["image_url"]
+        # img_bytes = httpx.get(url, timeout=60 * 3).content
         img = Image.open(io.BytesIO(img_bytes))
 
         # set input_size

@@ -81,6 +81,8 @@ RUN pip3 install advertorch@git+https://ghproxy.com/https://github.com/BorealisA
 
 RUN pip3 install --force-reinstall pillow
 
+RUN pip3 install mosec wget
+
 # COPY requirements.txt /
 
 # RUN pip install -r requirements.txt
@@ -109,7 +111,12 @@ RUN mkdir -p  models/ldm/stable-diffusion-v1
 
 COPY sd-v1-4.ckpt models/ldm/stable-diffusion-v1/model.ckpt
 
+RUN mkdir -p hub/checkpoints
+
+COPY checkpoint_liberty_with_aug.pth hub/checkpoints/checkpoint_liberty_with_aug.pth
+
+# dry run
 RUN python3 mist_v2_dryrun.py 16 100 512 1 2 1
 
-ENTRYPOINT [ "python3", "mist_v2_main.py" ]
-CMD [ "--timeout", "20000" ]
+# ENTRYPOINT [ "python3", "mist_v2_main.py" ]
+# CMD [ "--timeout", "20000" ]
