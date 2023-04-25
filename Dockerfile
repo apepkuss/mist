@@ -118,5 +118,5 @@ COPY checkpoint_liberty_with_aug.pth hub/checkpoints/checkpoint_liberty_with_aug
 # dry run
 RUN python3 mist_v2_dryrun.py 16 100 512 1 2 1
 
-# ENTRYPOINT [ "python3", "mist_v2_main.py" ]
-# CMD [ "--timeout", "20000" ]
+ENTRYPOINT [ "python3", "mist_v2_main.py" ]
+CMD [ "--timeout", "20000" ]
