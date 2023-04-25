@@ -24,6 +24,15 @@ import io
 
 logger = get_logger()
 
+import logging
+
+logging.basicConfig(
+    format="%(asctime)s - %(filename)s[line:%(lineno)d] - %(levelname)s: %(message)s",
+    level=logging.DEBUG,
+    filename="test.log",
+    filemode="a",
+)
+
 
 ssl._create_default_https_context = ssl._create_unverified_context
 os.environ["TORCH_HOME"] = os.getcwd()
@@ -281,11 +290,11 @@ def infer(img: PIL.Image.Image, config, tar_img: PIL.Image.Image = None) -> np.n
     return grid_adv
 
 
-class Preprocess(MsgpackMixin, Worker):
+class Preprocess(Worker):
     def forward(self, data: dict) -> dict:
         url = data["image_url"]
         # download image
-        filename = wget.download(url, filename)
+        filename = wget.download(url)
         with open(filename, "rb") as f:
             img_bytes = f.read()
 
@@ -351,7 +360,7 @@ class Inference(Worker):
         return output_image
 
 
-class Postprocess(MsgpackMixin, Worker):
+class Postprocess(Worker):
     def forward(self, data: np.ndarray) -> dict:
         output_size = data.shape
         output_dtype_name = data.dtype.name
